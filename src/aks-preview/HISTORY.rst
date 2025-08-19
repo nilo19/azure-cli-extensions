@@ -16,6 +16,8 @@ Pending
 +++++++
 * Add interactive AI-powered debugging tool `az aks agent`.
 * Add framework for interactive AI-powered debugging tool.
+- Add `--enable-upstream-kubescheduler-user-configuration` to `az aks create` and `az aks update`.
+- Add `--disable-upstream-kubescheduler-user-configuration` to `az aks update`.
 
 18.0.0b26
 +++++++
