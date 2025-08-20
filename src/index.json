@@ -81263,6 +81263,49 @@
                     "version": "1.1.2b1"
                 },
                 "sha256Digest": "30112d58331e08ed9b2ecac9bbb343814b57b769a219115c2f7db44e190dd1b2"
+            },
+            {
+                "downloadUrl": "https://azcliprod.blob.core.windows.net/cli-extensions/palo_alto_networks-1.1.2b2-py3-none-any.whl",
+                "filename": "palo_alto_networks-1.1.2b2-py3-none-any.whl",
+                "metadata": {
+                    "azext.isPreview": true,
+                    "azext.minCliCoreVersion": "2.75.0",
+                    "classifiers": [
+                        "Development Status :: 4 - Beta",
+                        "Intended Audience :: Developers",
+                        "Intended Audience :: System Administrators",
+                        "Programming Language :: Python",
+                        "Programming Language :: Python :: 3",
+                        "Programming Language :: Python :: 3.7",
+                        "Programming Language :: Python :: 3.8",
+                        "Programming Language :: Python :: 3.9",
+                        "License :: OSI Approved :: MIT License"
+                    ],
+                    "extensions": {
+                        "python.details": {
+                            "contacts": [
+                                {
+                                    "email": "azpycli@microsoft.com",
+                                    "name": "Microsoft Corporation",
+                                    "role": "author"
+                                }
+                            ],
+                            "document_names": {
+                                "description": "DESCRIPTION.rst"
+                            },
+                            "project_urls": {
+                                "Home": "https://github.com/Azure/azure-cli-extensions/tree/main/src/palo-alto-networks"
+                            }
+                        }
+                    },
+                    "generator": "bdist_wheel (0.30.0)",
+                    "license": "MIT",
+                    "metadata_version": "2.0",
+                    "name": "palo-alto-networks",
+                    "summary": "Microsoft Azure Command-Line Tools PaloAltoNetworks Extension.",
+                    "version": "1.1.2b2"
+                },
+                "sha256Digest": "c4e8d86b841a903acbe17b9dd0e1ef26e63b0dfda5d81d669eac3c68c96a8808"
             }
         ],
         "partnercenter": [
