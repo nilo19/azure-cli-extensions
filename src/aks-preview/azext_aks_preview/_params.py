@@ -2844,6 +2844,16 @@ def load_arguments(self, _):
             help="Refresh the toolsets status.",
             action="store_true",
         )
+        c.argument(
+            "no_aks_mcp",
+            options_list=["--no-aks-mcp"],
+            action="store_true",
+            help="Disable AKS MCP integration and use traditional built-in toolsets",
+            is_preview=True,
+        )
+
+    with self.argument_context("aks agent status") as c:
+        pass  # No additional parameters needed for status command
 
 
 def _get_default_install_location(exe_name):
