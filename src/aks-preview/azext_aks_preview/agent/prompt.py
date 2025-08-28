@@ -215,6 +215,17 @@ AKS_CONTEXT_PROMPT_MCP = _AKS_BASE_CONTEXT + _MCP_TOOLSET_INSTRUCTIONS + """
 - **Leverage MCP's enhanced capabilities** for cross-layer troubleshooting
 - **Consider AKS limitations and best practices** with MCP-provided insights
 
+## 📚 Example Usage - MCP Enhanced Capabilities
+
+**Common MCP Tool Usage Examples:**
+
+1. **Resource Metrics & Diagnostics:**
+   - To get metrics of Kubernetes resources (e.g., node CPU usage), use `kubectl_diagnostics` tool in aks-mcp
+   - For memory usage analysis: `kubectl_diagnostics` provides detailed resource consumption data
+   - For storage metrics: `kubectl_diagnostics` can analyze PV/PVC usage and capacity
+
+**MCP Advantage:** These tools provide context-aware analysis that traditional kubectl/az commands cannot match, offering deeper insights and automated correlation across the entire AKS stack.
+
 **Note**: "Cluster" in this context refers to both the Azure-managed AKS cluster AND the Kubernetes resources running within it. MCP tools provide unified access to both layers with enhanced context awareness.
 """
 
