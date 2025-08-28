@@ -4421,7 +4421,11 @@ def aks_agent(
     show_tool_output=False,
     refresh_toolsets=False,
     no_aks_mcp=False,
+    status=False,
 ):
+    # Handle status display first
+    if status:
+        return aks_agent_status(cmd)
 
     aks_agent_internal(
         cmd,

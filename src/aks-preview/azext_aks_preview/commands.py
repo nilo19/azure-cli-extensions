@@ -189,7 +189,6 @@ def load_command_table(self, _):
         )
         g.custom_command("bastion", "aks_bastion")
         g.custom_command("agent", "aks_agent")
-        g.custom_command("agent status", "aks_agent_status")
 
     # AKS maintenance configuration commands
     with self.command_group(

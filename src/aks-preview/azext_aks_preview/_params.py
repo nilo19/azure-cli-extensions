@@ -2785,6 +2785,7 @@ def load_arguments(self, _):
         c.positional(
             "prompt",
             help="Ask any question and answer using available tools.",
+            nargs="?",
         )
         c.argument(
             "resource_group_name",
@@ -2851,9 +2852,12 @@ def load_arguments(self, _):
             help="Disable AKS MCP integration and use traditional built-in toolsets",
             is_preview=True,
         )
-
-    with self.argument_context("aks agent status") as c:
-        pass  # No additional parameters needed for status command
+        c.argument(
+            "status",
+            options_list=["--status"],
+            action="store_true",
+            help="Show AKS agent configuration and status information",
+        )
 
 
 def _get_default_install_location(exe_name):
