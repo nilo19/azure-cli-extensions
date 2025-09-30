@@ -7,18 +7,28 @@ import logging
 import os
 import sys
 
+# DIAGNOSTIC: Module load tracking
+print("[DIAGNOSTIC] agent.py: Module loading started", file=sys.stderr, flush=True)
+
+print("[DIAGNOSTIC] agent.py: Importing constants...", file=sys.stderr, flush=True)
 from azext_aks_agent._consts import (
     CONST_AGENT_CONFIG_PATH_DIR_ENV_KEY,
     CONST_AGENT_NAME,
     CONST_AGENT_NAME_ENV_KEY,
 )
+
+print("[DIAGNOSTIC] agent.py: Importing Azure CLI core modules...", file=sys.stderr, flush=True)
 from azure.cli.core.api import get_config_dir
 from azure.cli.core.commands.client_factory import get_subscription_id
 from knack.util import CLIError
 
+print("[DIAGNOSTIC] agent.py: Importing local modules (prompt, telemetry, error_handler)...", file=sys.stderr, flush=True)
 from .prompt import AKS_CONTEXT_PROMPT_MCP, AKS_CONTEXT_PROMPT_TRADITIONAL
 from .telemetry import CLITelemetryClient
 from .error_handler import MCPError
+
+print("[DIAGNOSTIC] agent.py: All imports completed", file=sys.stderr, flush=True)
+sys.stderr.flush()
 
 
 # NOTE(mainred): holmes leverage the log handler RichHandler to provide colorful, readable and well-formatted logs
@@ -26,6 +36,8 @@ from .error_handler import MCPError
 # And we removed exising log handlers to avoid duplicate logs.
 # Also make the console log consistent, we remove the telemetry and data logger to skip redundant logs.
 def init_log():
+    print("[DIAGNOSTIC] init_log() called - setting up logging...", file=sys.stderr, flush=True)
+
     # NOTE(mainred): we need to disable INFO logs from LiteLLM before LiteLLM library is loaded, to avoid logging the
     # debug logs from heading of LiteLLM.
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
@@ -35,10 +47,21 @@ def init_log():
     logging.getLogger("telemetry.client").setLevel(logging.WARNING)
     logging.getLogger("az_command_data_logger").setLevel(logging.WARNING)
 
+    print("[DIAGNOSTIC] init_log() - about to import holmes.utils.console.logging...", file=sys.stderr, flush=True)
+    sys.stderr.flush()
+
     from holmes.utils.console.logging import init_logging
 
+    print("[DIAGNOSTIC] init_log() - imported, calling init_logging([])...", file=sys.stderr, flush=True)
+    sys.stderr.flush()
+
     # TODO: make log verbose configurable, currently disabled by [].
-    return init_logging([])
+    result = init_logging([])
+
+    print("[DIAGNOSTIC] init_log() - init_logging completed, returning console", file=sys.stderr, flush=True)
+    sys.stderr.flush()
+
+    return result
 
 
 def _get_mode_state_file() -> str:

@@ -5,12 +5,25 @@
 
 # pylint: disable=too-many-lines, disable=broad-except
 import os
+import sys
+
+# DIAGNOSTIC: Module load started
+print("[DIAGNOSTIC] custom.py: Module loading started", file=sys.stderr, flush=True)
+
+print("[DIAGNOSTIC] custom.py: About to import aks_agent from agent.agent...", file=sys.stderr, flush=True)
+sys.stderr.flush()
+
 from azext_aks_agent.agent.agent import aks_agent as aks_agent_internal
+
+print("[DIAGNOSTIC] custom.py: Successfully imported aks_agent_internal", file=sys.stderr, flush=True)
+sys.stderr.flush()
 
 from knack.log import get_logger
 
 
 logger = get_logger(__name__)
+print("[DIAGNOSTIC] custom.py: Module fully loaded", file=sys.stderr, flush=True)
+sys.stderr.flush()
 
 
 # pylint: disable=unused-argument
@@ -30,9 +43,18 @@ def aks_agent(
     status=False,
     use_aks_mcp=False,
 ):
+    # DIAGNOSTIC: Print immediately at CLI entry point
+    import sys
+    print("[DIAGNOSTIC] custom.py:aks_agent() called - CLI command entry point", file=sys.stderr, flush=True)
+    print(f"[DIAGNOSTIC] Args: model={model}, no_interactive={no_interactive}, status={status}", file=sys.stderr, flush=True)
+
     # If only status is requested, display and return early
     if status:
+        print("[DIAGNOSTIC] Status mode requested, calling aks_agent_status()", file=sys.stderr, flush=True)
         return aks_agent_status(cmd)
+
+    print("[DIAGNOSTIC] About to import aks_agent_internal from agent.agent module...", file=sys.stderr, flush=True)
+    sys.stderr.flush()
 
     aks_agent_internal(
         cmd,
@@ -49,6 +71,8 @@ def aks_agent(
         refresh_toolsets,
         use_aks_mcp=use_aks_mcp,
     )
+
+    print("[DIAGNOSTIC] aks_agent_internal() returned successfully", file=sys.stderr, flush=True)
 
 
 def aks_agent_status(cmd):
