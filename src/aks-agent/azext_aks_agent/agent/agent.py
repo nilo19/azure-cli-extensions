@@ -153,19 +153,27 @@ def aks_agent(
 
     with CLITelemetryClient():
         import logging
-        logger = logging.getLogger(__name__)
         import sys
         import os as os_diagnostic
 
-        # Force unbuffered output for ADO pipelines
-        sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
-        sys.stderr.reconfigure(line_buffering=True) if hasattr(sys.stderr, 'reconfigure') else None
+        # Force unbuffered output for ADO pipelines - MUST do this first
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(line_buffering=True)
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(line_buffering=True)
+
+        # Use both print and logger for maximum visibility
+        print("[DIAGNOSTIC] aks_agent function called - entry point reached", file=sys.stderr, flush=True)
+
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
 
         logger.info("[DIAGNOSTIC] aks_agent function called")
         logger.info(f"[DIAGNOSTIC] Python version: {sys.version}")
         logger.info(f"[DIAGNOSTIC] isatty stdin: {sys.stdin.isatty()}, stdout: {sys.stdout.isatty()}, stderr: {sys.stderr.isatty()}")
         logger.info(f"[DIAGNOSTIC] PYTHONUNBUFFERED: {os_diagnostic.environ.get('PYTHONUNBUFFERED', 'not set')}")
         logger.info(f"[DIAGNOSTIC] no_interactive: {no_interactive}, model: {model}")
+        print(f"[DIAGNOSTIC] Starting with model={model}, no_interactive={no_interactive}", file=sys.stderr, flush=True)
         sys.stdout.flush()
         sys.stderr.flush()
 
@@ -177,8 +185,10 @@ def aks_agent(
         # Initialize variables
         interactive = not no_interactive
         echo = not no_echo_request
+        print("[DIAGNOSTIC] About to initialize console/logging...", file=sys.stderr, flush=True)
         logger.info("[DIAGNOSTIC] Initializing console/logging...")
         console = init_log()
+        print("[DIAGNOSTIC] Console initialized successfully", file=sys.stderr, flush=True)
         logger.info("[DIAGNOSTIC] Console initialized")
         sys.stdout.flush()
         sys.stderr.flush()
@@ -264,6 +274,7 @@ def aks_agent(
             # Create AI client once with proper refresh settings
             import logging
             logger = logging.getLogger(__name__)
+            print("[DIAGNOSTIC] About to create console_toolcalling_llm...", file=sys.stderr, flush=True)
             logger.info("[DIAGNOSTIC] About to create console_toolcalling_llm...")
             import sys
             sys.stdout.flush()
@@ -274,6 +285,7 @@ def aks_agent(
                 refresh_toolsets=effective_refresh_toolsets,
             )
 
+            print("[DIAGNOSTIC] AI client created successfully", file=sys.stderr, flush=True)
             logger.info("[DIAGNOSTIC] AI client created successfully")
             sys.stdout.flush()
             sys.stderr.flush()
@@ -696,13 +708,16 @@ def _run_noninteractive_mode_sync(ai, config, cmd, resource_group_name, name,
     import logging
     logger = logging.getLogger(__name__)
 
+    print("[DIAGNOSTIC] Starting _run_noninteractive_mode_sync", file=sys.stderr, flush=True)
     logger.info("[DIAGNOSTIC] Starting _run_noninteractive_mode_sync")
     logger.info("[DIAGNOSTIC] Getting subscription ID...")
     subscription_id = get_subscription_id(cmd.cli_ctx)
+    print(f"[DIAGNOSTIC] Subscription ID obtained: {subscription_id[:8] if subscription_id else 'None'}...", file=sys.stderr, flush=True)
     logger.info(f"[DIAGNOSTIC] Subscription ID obtained: {subscription_id[:8] if subscription_id else 'None'}...")
 
     logger.info("[DIAGNOSTIC] Building AKS context...")
     aks_context = _build_aks_context(name, resource_group_name, subscription_id, is_mcp_mode)
+    print(f"[DIAGNOSTIC] AKS context built successfully (length: {len(aks_context)} chars)", file=sys.stderr, flush=True)
     logger.info(f"[DIAGNOSTIC] AKS context built successfully (length: {len(aks_context)} chars)")
 
     console.print(
@@ -713,13 +728,16 @@ def _run_noninteractive_mode_sync(ai, config, cmd, resource_group_name, name,
         console.print("[bold yellow]User:[/bold yellow] " + prompt)
 
     # Build and execute the conversation
+    print("[DIAGNOSTIC] Building initial messages...", file=sys.stderr, flush=True)
     logger.info("[DIAGNOSTIC] Building initial messages...")
     messages = build_initial_ask_messages(
         console, prompt, None, ai.tool_executor,
         config.get_runbook_catalog(), system_prompt_additions=aks_context
     )
+    print(f"[DIAGNOSTIC] Messages built: {len(messages)} message(s)", file=sys.stderr, flush=True)
     logger.info(f"[DIAGNOSTIC] Messages built: {len(messages)} message(s)")
 
+    print("[DIAGNOSTIC] About to call AI LLM endpoint...", file=sys.stderr, flush=True)
     logger.info("[DIAGNOSTIC] About to call AI LLM endpoint...")
     import sys
     import signal
@@ -734,7 +752,9 @@ def _run_noninteractive_mode_sync(ai, config, cmd, resource_group_name, name,
 
     def timeout_handler(signum, frame):
         elapsed = time.time() - start_time
-        logger.error(f"[DIAGNOSTIC] AI call timeout after {elapsed:.1f}s - raising exception")
+        error_msg = f"[DIAGNOSTIC] AI call timeout after {elapsed:.1f}s - raising exception"
+        print(error_msg, file=sys.stderr, flush=True)
+        logger.error(error_msg)
         raise TimeoutError(f"AI call exceeded timeout of {ai_call_timeout}s")
 
     # Set signal handler for timeout (Unix only)
@@ -746,13 +766,19 @@ def _run_noninteractive_mode_sync(ai, config, cmd, resource_group_name, name,
     try:
         response = ai.call(messages)
         elapsed = time.time() - start_time
-        logger.info(f"[DIAGNOSTIC] AI call completed successfully in {elapsed:.1f}s")
+        success_msg = f"[DIAGNOSTIC] AI call completed successfully in {elapsed:.1f}s"
+        print(success_msg, file=sys.stderr, flush=True)
+        logger.info(success_msg)
     except TimeoutError:
-        logger.error("[DIAGNOSTIC] AI call timed out - this indicates network/API connectivity issues")
+        error_msg = "[DIAGNOSTIC] AI call timed out - this indicates network/API connectivity issues"
+        print(error_msg, file=sys.stderr, flush=True)
+        logger.error(error_msg)
         raise
     except Exception as e:
         elapsed = time.time() - start_time
-        logger.error(f"[DIAGNOSTIC] AI call failed after {elapsed:.1f}s with error: {type(e).__name__}: {str(e)}")
+        error_msg = f"[DIAGNOSTIC] AI call failed after {elapsed:.1f}s with error: {type(e).__name__}: {str(e)}"
+        print(error_msg, file=sys.stderr, flush=True)
+        logger.error(error_msg)
         raise
     finally:
         # Cancel alarm

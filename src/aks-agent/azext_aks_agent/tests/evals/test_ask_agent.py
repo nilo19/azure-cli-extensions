@@ -117,13 +117,57 @@ def _run_cli(command: Iterable[str], env: dict[str, str]) -> str:
     command_display = _summarise_command(command_list)
     _log(f"Invoking AKS Agent CLI: {command_display}")
     start = perf_counter()
+
+    # Add timeout and real-time stderr display for debugging
+    import sys
+    import threading
+    timeout_seconds = 600  # 10 minutes timeout
+
     try:
-        result = subprocess.run(  # noqa: S603
+        # Use Popen for real-time output visibility
+        process = subprocess.Popen(  # noqa: S603
             command_list,
-            check=True,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
             env=env,
+        )
+
+        # Thread to print stderr in real-time
+        stderr_lines = []
+        def print_stderr():
+            for line in iter(process.stderr.readline, ''):
+                if line:
+                    print(f"[STDERR] {line.rstrip()}", file=sys.stderr, flush=True)
+                    stderr_lines.append(line)
+
+        stderr_thread = threading.Thread(target=print_stderr, daemon=True)
+        stderr_thread.start()
+
+        # Wait with timeout
+        try:
+            stdout, _ = process.communicate(timeout=timeout_seconds)
+            stderr_thread.join(timeout=1)
+            stderr = ''.join(stderr_lines)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout, stderr_remainder = process.communicate()
+            stderr = ''.join(stderr_lines) + (stderr_remainder or '')
+            _log(f"[ERROR] CLI command timed out after {timeout_seconds}s")
+            pytest.fail(
+                f"AKS Agent CLI call timed out after {timeout_seconds}s\n"
+                f"Command: {command_display}\n"
+                f"Stdout: {stdout}\n"
+                f"Stderr: {stderr}"
+            )
+
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(
+                process.returncode, command_list, stdout, stderr
+            )
+
+        result = subprocess.CompletedProcess(
+            command_list, process.returncode, stdout, stderr
         )
     except subprocess.CalledProcessError as exc:  # pragma: no cover - live failure path
         output = exc.stdout or ""
