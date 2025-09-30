@@ -152,6 +152,23 @@ def aks_agent(
     """
 
     with CLITelemetryClient():
+        import logging
+        logger = logging.getLogger(__name__)
+        import sys
+        import os as os_diagnostic
+
+        # Force unbuffered output for ADO pipelines
+        sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
+        sys.stderr.reconfigure(line_buffering=True) if hasattr(sys.stderr, 'reconfigure') else None
+
+        logger.info("[DIAGNOSTIC] aks_agent function called")
+        logger.info(f"[DIAGNOSTIC] Python version: {sys.version}")
+        logger.info(f"[DIAGNOSTIC] isatty stdin: {sys.stdin.isatty()}, stdout: {sys.stdout.isatty()}, stderr: {sys.stderr.isatty()}")
+        logger.info(f"[DIAGNOSTIC] PYTHONUNBUFFERED: {os_diagnostic.environ.get('PYTHONUNBUFFERED', 'not set')}")
+        logger.info(f"[DIAGNOSTIC] no_interactive: {no_interactive}, model: {model}")
+        sys.stdout.flush()
+        sys.stderr.flush()
+
         if sys.version_info < (3, 10):
             raise CLIError(
                 "Please upgrade the python version to 3.10 or above to use aks agent."
@@ -160,7 +177,11 @@ def aks_agent(
         # Initialize variables
         interactive = not no_interactive
         echo = not no_echo_request
+        logger.info("[DIAGNOSTIC] Initializing console/logging...")
         console = init_log()
+        logger.info("[DIAGNOSTIC] Console initialized")
+        sys.stdout.flush()
+        sys.stderr.flush()
 
         # Set environment variables for Holmes
         os.environ[CONST_AGENT_CONFIG_PATH_DIR_ENV_KEY] = get_config_dir()
@@ -241,10 +262,21 @@ def aks_agent(
                 )
 
             # Create AI client once with proper refresh settings
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("[DIAGNOSTIC] About to create console_toolcalling_llm...")
+            import sys
+            sys.stdout.flush()
+            sys.stderr.flush()
+
             ai = config.create_console_toolcalling_llm(
                 dal=None,
                 refresh_toolsets=effective_refresh_toolsets,
             )
+
+            logger.info("[DIAGNOSTIC] AI client created successfully")
+            sys.stdout.flush()
+            sys.stderr.flush()
 
             # Validate inputs
             if not prompt and not interactive and not piped_data:
@@ -661,8 +693,17 @@ def _run_noninteractive_mode_sync(ai, config, cmd, resource_group_name, name,
     from holmes.utils.console.result import handle_result
 
     # Prepare AKS context with mode-specific prompt
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info("[DIAGNOSTIC] Starting _run_noninteractive_mode_sync")
+    logger.info("[DIAGNOSTIC] Getting subscription ID...")
     subscription_id = get_subscription_id(cmd.cli_ctx)
+    logger.info(f"[DIAGNOSTIC] Subscription ID obtained: {subscription_id[:8] if subscription_id else 'None'}...")
+
+    logger.info("[DIAGNOSTIC] Building AKS context...")
     aks_context = _build_aks_context(name, resource_group_name, subscription_id, is_mcp_mode)
+    logger.info(f"[DIAGNOSTIC] AKS context built successfully (length: {len(aks_context)} chars)")
 
     console.print(
         "[bold yellow]This tool uses AI to generate responses and may not always be accurate.[bold yellow]"
@@ -672,12 +713,55 @@ def _run_noninteractive_mode_sync(ai, config, cmd, resource_group_name, name,
         console.print("[bold yellow]User:[/bold yellow] " + prompt)
 
     # Build and execute the conversation
+    logger.info("[DIAGNOSTIC] Building initial messages...")
     messages = build_initial_ask_messages(
         console, prompt, None, ai.tool_executor,
         config.get_runbook_catalog(), system_prompt_additions=aks_context
     )
+    logger.info(f"[DIAGNOSTIC] Messages built: {len(messages)} message(s)")
 
-    response = ai.call(messages)
+    logger.info("[DIAGNOSTIC] About to call AI LLM endpoint...")
+    import sys
+    import signal
+    import time
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    # Add timeout mechanism for AI call
+    ai_call_timeout = 300  # 5 minutes timeout
+    start_time = time.time()
+
+    def timeout_handler(signum, frame):
+        elapsed = time.time() - start_time
+        logger.error(f"[DIAGNOSTIC] AI call timeout after {elapsed:.1f}s - raising exception")
+        raise TimeoutError(f"AI call exceeded timeout of {ai_call_timeout}s")
+
+    # Set signal handler for timeout (Unix only)
+    old_handler = None
+    if hasattr(signal, 'SIGALRM'):
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(ai_call_timeout)
+
+    try:
+        response = ai.call(messages)
+        elapsed = time.time() - start_time
+        logger.info(f"[DIAGNOSTIC] AI call completed successfully in {elapsed:.1f}s")
+    except TimeoutError:
+        logger.error("[DIAGNOSTIC] AI call timed out - this indicates network/API connectivity issues")
+        raise
+    except Exception as e:
+        elapsed = time.time() - start_time
+        logger.error(f"[DIAGNOSTIC] AI call failed after {elapsed:.1f}s with error: {type(e).__name__}: {str(e)}")
+        raise
+    finally:
+        # Cancel alarm
+        if hasattr(signal, 'SIGALRM') and old_handler is not None:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+
+    sys.stdout.flush()
+    sys.stderr.flush()
 
     # Handle the result
     issue = Issue(
