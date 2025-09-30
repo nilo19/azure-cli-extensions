@@ -9,7 +9,7 @@ import os
 import shlex
 import subprocess
 import textwrap
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 from typing import Iterable
@@ -46,7 +46,7 @@ BRAINTRUST_UPLOADER = BraintrustUploader(os.environ)
 
 def _log(message: str) -> None:
     """Emit a timestamped log line that pytest `-s` will surface immediately."""
-    timestamp = datetime.utcnow().isoformat(timespec="seconds")
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     print(f"[{timestamp}] {message}", flush=True)
 
 
