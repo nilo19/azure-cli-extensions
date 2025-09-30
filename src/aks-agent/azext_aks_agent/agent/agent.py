@@ -217,18 +217,43 @@ def aks_agent(
         sys.stderr.flush()
 
         # Set environment variables for Holmes
+        print("[DIAGNOSTIC] Setting environment variables...", file=sys.stderr, flush=True)
         os.environ[CONST_AGENT_CONFIG_PATH_DIR_ENV_KEY] = get_config_dir()
         os.environ[CONST_AGENT_NAME_ENV_KEY] = CONST_AGENT_NAME
+        print("[DIAGNOSTIC] Environment variables set", file=sys.stderr, flush=True)
 
-        # Detect and read piped input
+        # Detect and read piped input with timeout protection
         piped_data = None
-        if not sys.stdin.isatty():
-            piped_data = sys.stdin.read().strip()
-            if interactive:
-                console.print(
-                    "[bold yellow]Interactive mode disabled when reading piped input[/bold yellow]"
-                )
-                interactive = False
+        print("[DIAGNOSTIC] Checking for piped input...", file=sys.stderr, flush=True)
+
+        # In non-interactive mode with a prompt, we shouldn't try to read stdin
+        # as it may hang in CI/CD environments. Only read stdin if:
+        # 1. Not a TTY (indicating piped input)
+        # 2. Not in non-interactive mode (interactive mode allows stdin reading)
+        should_check_stdin = not sys.stdin.isatty() and interactive
+        print(f"[DIAGNOSTIC] sys.stdin.isatty() = {sys.stdin.isatty()}, interactive = {interactive}, should_check_stdin = {should_check_stdin}", file=sys.stderr, flush=True)
+
+        if should_check_stdin:
+            print("[DIAGNOSTIC] Stdin is not a TTY and interactive mode enabled, attempting to read piped data...", file=sys.stderr, flush=True)
+            try:
+                # Use select with timeout to avoid hanging
+                import select
+                # Check if data is available with 100ms timeout
+                if select.select([sys.stdin], [], [], 0.1)[0]:
+                    piped_data = sys.stdin.read().strip()
+                    print(f"[DIAGNOSTIC] Read {len(piped_data)} bytes of piped data", file=sys.stderr, flush=True)
+                    console.print(
+                        "[bold yellow]Interactive mode disabled when reading piped input[/bold yellow]"
+                    )
+                    interactive = False
+                else:
+                    print("[DIAGNOSTIC] No piped data available (select timeout)", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"[DIAGNOSTIC] Error reading stdin: {type(e).__name__}: {e}, continuing without piped data", file=sys.stderr, flush=True)
+        else:
+            print("[DIAGNOSTIC] Skipping stdin check - stdin is TTY or non-interactive mode", file=sys.stderr, flush=True)
+
+        print("[DIAGNOSTIC] Piped input check completed", file=sys.stderr, flush=True)
 
         # Determine MCP mode and smart refresh logic
         use_aks_mcp = bool(use_aks_mcp)
